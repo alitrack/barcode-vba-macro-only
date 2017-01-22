@@ -1,12 +1,17 @@
 Rem  *****  BASIC  *****
 Option VBASupport 1
 Rem
+Rem  *****  BASIC  *****
 Rem This software is distributd under The MIT License (MIT)
-Rem Copyright Â© 2013 Madeta a.s. JiÅ™Ã­ Gabriel
+Rem Copyright © 2013 Madeta a.s. Jiri Gabriel
 Rem Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 Rem The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 Rem THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 Rem
+Rem Some code comments translated from Czech into English using an online translator by JonasHeidelberg - careful, might be quite wrong
+Rem Bug fixes in qr_gen by JonasHeidelberg, see  http://stackoverflow.com/questions/41404226/why-does-this-vba-generated-qr-code-stutter-barcode-vba-macro-only
+Rem Code of RenderQRCode() and DrawQRCode() by Patratacus for creating QR code from VBA (not Excel formula) taken from http://stackoverflow.com/questions/16143331/generating-2d-pdf417-or-qr-barcodes-using-excel-vba/31663859#31663859
+Rem ** This version has only been tested in MSOffice - not sure if this is fully compatible with LibreOffice **
 Option Explicit
 Const BCEnc128$ = "1A1B1B1B1A1B1B1B1A0B0B1C0B0C1B0C0B1B0B1B0C0B1C0B0C1B0B1B0B0C1B0C0B1C0B0B0A1B2B0B1A2B0B1B2A0A2B1B0B2A1B0B2B1A1B2B0A1B0A2B1B0B2A1A2B0B1B2A0B2A1A2A2A0B1B2B0A1B2B0B1A2A1B0B2B1A0B2B1B0A1A1A1C1A1C1A1C1A1A0A0C1C0C0A1C0C0C1A0A1C0C0C1A0C0C1C0A1A0C0C1C0A0C1C0C0A0A1A2C0A1C2A0C1A2A0A2A1C0A2C1A0C2A1A2A2A1A1A0C2A1C0A2A1A2A0C1A2C0A1A2A2A2A0A1C2A0C1A2C0A1A2A1A0C2A1C0A2C1A0A2A3A0A1B0D0A3C0A0A0A0B1D0A0D1B0B0A1D0B0D1A0D0A1B0D0B1A0A1B0D0A1D0B0B1A0D0B1D0A0D1A0B0D1B0A1D0B0A1B0A0D3A2A0A1D0A0B0C3A0A0A0B3B0B0A3B0B0B3A0A3B0B0B3A0B0B3B0A3A0B0B3B0A0B3B0B0A1A1A3A1A3A1A3A1A1A0A0A3C0A0C3A0C0A3A0A3A0C0A3C0A3A0A0C3A0C0A0A2A3A0A3A2A2A0A3A3A0A2A1A0D0B1A0B0D1A0B2B1C2A0A1"
 Const BCEncE13$ = "C6A5A5B77B5AB6B5A6B66B6AB5B6B6A66A6BA8A5A5D55D5AA5C6B7A55A7BA6C5A7B55B7AA5A8D5A55A5DA7A6B5C55C5BA6A7C5B55B5CC5A6B5A77A5B"
@@ -17,15 +22,17 @@ Const BCEnc25$ = "00110100010100111000001011010001100000111001001010AABBABAAABAB
 Const qralnum$ = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:"
 
 Dim IsMs As Boolean
+
 Sub Init()
   If VarType(Asc("A")) = 2 Then IsMs = True Else IsMs = False
 End Sub
+
 ' MS: EncodeBarcode(POLICKO("SHEET");POLICKO("ADDRESS");A2;1;1;0;2)
-'  Pouziti: EncodeBarcode(CELL("SHEET");CELL("ADDRESS");A2;1;1;0;2)
+'    Usage: EncodeBarcode(CELL("SHEET");CELL("ADDRESS");A2;1;1;0;2)
 '                                                       /  | | | \
-'                                Obsah kodu (retezec) -'   / | \  `- Ochranne zony pro 1D kody (sirka)
-'                                   Graficky=1,Font=0  ---'  /  `--- Parametry (podle typu kodu)
-' 0-Code128,1-EAN,2-2of5I,3-Code39,50-Datamatrix,51-QR -----'
+'                        The barcode content (string) -'   / | \  `- Protection zone for 1D codes (width)
+' 0-Code128,1-EAN,2-2of5I,3-Code39,50-Datamatrix,51-QR ---'  /  `--- Parameters (depending on the barcode type)
+'                       Output type: graphic=1,Font=0  -----'
 Public Function EncodeBarcode(ShIx As Integer, xAddr As String, _
                 code As String, pbctype%, Optional pgraficky%, _
                 Optional pparams%, Optional pzones%) As String
@@ -49,7 +56,7 @@ Public Function EncodeBarcode(ShIx As Integer, xAddr As String, _
            '        + 7 = add checksum
       s = bc_Code39(code, params, zones)
     Case 50 ' DataMatrix params: 1 = force ASCII encoding
-      s = dmx_gen(code, Iif(params = 1, "ASCII", ""))
+      s = dmx_gen(code, IIf(params = 1, "ASCII", ""))
     Case 51 ' QRCode params: ECLevel 0=M 1=L 2=Q 3=H
       s = "mode=" & Mid("MLQH", (params Mod 4) + 1, 1)
       s = qr_gen(code, s)
@@ -88,7 +95,7 @@ Function bc_25I(chaine$, Optional zones%) As String
   If IsMissing(zones%) Then
     zon$ = "DD"
   Else
-    zon$ = Iif(zones% <= 0, "", Mid$("DDDDDDDDDD", 1, zones%))
+    zon$ = IIf(zones% <= 0, "", Mid$("DDDDDDDDDD", 1, zones%))
   End If
   q = chaine
   s = ""
@@ -104,8 +111,8 @@ Function bc_25I(chaine$, Optional zones%) As String
   If (i Mod 2) = 1 Then s = "0" & s
   q = zon & "0A0A" ' Start
   For i = 1 To Len(s) Step 2
-    j = val(Mid(s, i, 1)) * 5
-    k = 50 + val(Mid(s, i + 1, 1)) * 5
+    j = Val(Mid(s, i, 1)) * 5
+    k = 50 + Val(Mid(s, i + 1, 1)) * 5
     For l = 1 To 5
       q = q & Mid(BCEnc25, j + l, 1) & Mid(BCEnc25, k + l, 1)
     Next
@@ -121,7 +128,7 @@ Function bc_Code39(chaine$, Optional params%, Optional zones%) As String
   If IsMissing(zones) Then
     zon$ = "DD"
   Else
-    zon$ = Iif(zones <= 0, "", Mid("DDDDDDDDDD", 1, zones))
+    zon$ = IIf(zones <= 0, "", Mid("DDDDDDDDDD", 1, zones))
   End If
   If IsMissing(params) Then
     check = 0
@@ -181,7 +188,7 @@ Function bc_EAN(chaine$, Optional params%, Optional zones%) As String
   If IsMissing(zones) Then
     zon$ = "DD"
   Else
-    zon$ = Iif(zones <= 0, "", Mid("DDDDDDDDDD", 1, zones))
+    zon$ = IIf(zones <= 0, "", Mid("DDDDDDDDDD", 1, zones))
   End If
   If IsMissing(params) Then
     check = 0
@@ -204,15 +211,15 @@ Function bc_EAN(chaine$, Optional params%, Optional zones%) As String
     Wend
     If Len(s) > 6 Then s = Left(s, 6)
     p = s
-    first = val(right(p, 1))
+    first = Val(Right(p, 1))
     If first >= 5 Then
-      s = "00" & Left(p, 5) & "0000" & right(p, 1)
+      s = "00" & Left(p, 5) & "0000" & Right(p, 1)
     ElseIf first = 4 Then
       s = "00" & Left(p, 4) & "00000" & Mid(p, 5, 1)
     ElseIf first = 3 Then
       s = "00" & Left(p, 3) & "00000" & Mid(p, 4, 2)
     Else
-      s = "00" & Left(p, 2) & right(p, 1) & "0000" & Mid(p, 3, 3)
+      s = "00" & Left(p, 2) & Right(p, 1) & "0000" & Mid(p, 3, 3)
     End If
   End If
   If check = 1 Or subtyp = 4 Then s = s & "0"
@@ -229,7 +236,7 @@ Function bc_EAN(chaine$, Optional params%, Optional zones%) As String
   'Kontrolni soucet
   s = Left(s, 12) & Chr(48 + (10 - checksum Mod 10) Mod 10)
   If subtyp = 4 Then
-    s = "000000" & right(s, 1) & p
+    s = "000000" & Right(s, 1) & p
   End If
   If Left(s, 12) <> "000000000000" Then
     CodeBarre = CodeBarre & "0A0"
@@ -244,16 +251,16 @@ Function bc_EAN(chaine$, Optional params%, Optional zones%) As String
       j = 1
       p = "LLLLLLRRRRRR"
     ElseIf subtyp = 4 Then ' UPC-E
-      first = val(Mid(s, 7, 1)) ' check
+      first = Val(Mid(s, 7, 1)) ' check
       j = 7
       p = "000000" & Mid("GGGLLLGGLGLLGGLLGLGGLLLGGLGGLLGLLGGLGLLLGGGLGLGLGLGLLGGLLGLG", 1 + first * 6, 6)
     Else ' EAN13
       j = 1
-      first = val(Left(s, 1))
+      first = Val(Left(s, 1))
       p = Mid("LLLLLLLLGLGGLLGGLGLLGGGLLGLLGGLGGLLGLGGGLLLGLGLGLGLGGLLGGLGL", 1 + first * 6, 6) + "RRRRRR"
     End If
     For i = j To 12
-      first = val(Mid(s, i + 1, 1))
+      first = Val(Mid(s, i + 1, 1))
 '      L       G       R     BarsAndSpaces                          G=rev(R)=rev(inv(L)) R=Inv(L)
 '0      0001101 0100111 1110010 C1A0 A0B2 2B0A
 '1      0011001 0110011 1100110 B1B0 A1B1 1B1A
@@ -294,7 +301,7 @@ Function bc_Code128(chaine$, Optional params%, Optional zones%) As String
   If IsMissing(zones) Then
     zon$ = "DD"
   Else
-    zon$ = Iif(zones <= 0, "", Mid("DDDDDDDDDD", 1, zones))
+    zon$ = IIf(zones <= 0, "", Mid("DDDDDDDDDD", 1, zones))
   End If
 '  If IsMissing(params) Then
 '  Else
@@ -347,7 +354,7 @@ Function bc_Code128(chaine$, Optional params%, Optional zones%) As String
         min = min & "B"
     End Select
     q = "000" & Trim(CStr(Abs(n)))
-    If n < 0 Then q = "-" & right(q, 2) Else q = right(q, 3)
+    If n < 0 Then q = "-" & Right(q, 2) Else q = Right(q, 3)
     c128 = c128 & q
     i = i + 1
   Loop
@@ -367,7 +374,7 @@ Function bc_Code128(chaine$, Optional params%, Optional zones%) As String
   checkw = 1
   i = 1
   Do While i <= Len(min)
-    n = val(Mid(c128, -2 + (i * 3), 3))
+    n = Val(Mid(c128, -2 + (i * 3), 3))
     q = Mid(min, i, 1)
     Select Case tbl
       Case "C"
@@ -392,7 +399,7 @@ Function bc_Code128(chaine$, Optional params%, Optional zones%) As String
               i = i - 1
             Else
               i = i + 1
-              n = val(Mid(c128, -2 + (i * 3), 3))
+              n = Val(Mid(c128, -2 + (i * 3), 3))
               If n < 0 Then
                 tbl = "B"
                 n = 100
@@ -699,7 +706,7 @@ Function dmx_gen(ptext As String, poptions As String) As String
           j = -1
           i = i + 1
         ElseIf ch >= 48 And ch <= 57 And k >= 48 And k <= 57 Then
-          j = val(Mid(ptext, i, 2))
+          j = Val(Mid(ptext, i, 2))
         ElseIf Mid(ptext, i, 2) = "__" Then ' podtrzitko
           i = i + 1
           j = -5
@@ -1182,7 +1189,7 @@ Sub qr_params(ByVal pcap As Long, ByVal ecl As Integer, ByRef rv As Variant, ByR
     s = Mid("D01A01K01G01J01D01V01P01T01I01P02L02L02N01J04T02R02T01P04L04J04L02V04R04L04N02T05L06P04R02T06P06P05X02R08N08T05L04V08R08X05N04R11V08P08R04V11T10P09T04P16R12R09X04R16N16R10P06R18X12V10R06X16R17V11V06V19V16T13X06V21V18T14V07T25T21T16V08V25X20T17V08X25V23V17V09R34X23V18X09X30X25V20X10X32X27V21T12X35X29V23V12X37V34V25X12X40X34V26X13X42X35V28X14X45X38V29X15X48X40V31X16X51X43V33X17X54X45V35X18X57X48V37X19X60X51V38X19X63X53V40X20X66X56V43X21X70X59V45X22X74X62V47X24X77X65V49X25X81X68" _
             , i + 1, 3)
     ccsiz = AscL(Left(s, 1)) - 65 + 7
-    ccblks = val(right(s, 2))
+    ccblks = Val(Right(s, 2))
     If ver = 1 Then
       syncs = 0
       totby = 26
@@ -1487,12 +1494,17 @@ Function qr_gen(ptext As String, poptions As String) As String
   Dim ecx_cnt(3) As Integer
   Dim ecx_pos(3) As Integer
   Dim ecx_poc(3) As Integer
-  Dim eb(20, 4) As Integer
+  Dim eb(1 To 20, 1 To 4) As Integer 'store how many characters should be in which ECI mode. This is a list of rows, each row corresponding a the next batch of characters with a different ECI mode.
+  ' eb(i, 1) - ECI mode (1 = numeric, 2 = alphanumeric, 3 = byte)
+  ' eb(i, 2) - last character in previous row
+  ' eb(i, 3) - number of characters in THIS row
+  ' eb(i, 4) - number of bits for THIS row
   Dim ascimatrix$, mode$, err$
   Dim ecl%, r%, c%, mask%, utf8%, ebcnt%
   Dim i&, j&, k&, m&
   Dim ch%, s%, siz%
   Dim x As Boolean
+  Dim wasfixed As Boolean
   Dim qrarr() As Byte ' final matrix
   Dim qrpos As Integer
   Dim qrp(15) As Integer     ' 1:version,2:size,3:ccs,4:ccb,5:totby,6-12:syncs(7),13-15:versinfo(3)
@@ -1519,9 +1531,10 @@ Function qr_gen(ptext As String, poptions As String) As String
   ebcnt = 1
   utf8 = 0
   For i = 1 To Len(ptext) + 1
+    ' Decide how many bytes this character has
     If i > Len(ptext) Then
-      k = -5
-    Else
+      k = -5 ' End of text --> skip several code sections
+    Else ' need to parse character i of ptext and decide how many bytes it has
       k = AscL(Mid(ptext, i, 1))
       If k >= &H1FFFFF Then ' FFFF - 1FFFFFFF
         m = 4
@@ -1532,17 +1545,18 @@ Function qr_gen(ptext As String, poptions As String) As String
       ElseIf k >= 128 Then
         m = 2
         k = -1
-      Else
+      Else ' normal 7bit ASCII character, so it is worth it to check if it belong to the Numeric or Alphanumeric subsets defined in ECI (array qralnum)
         m = 1
         k = InStr(qralnum, Mid(ptext, i, 1)) - 1
       End If
     End If
-    If (k < 0) Then ' bude byte nebo konec
-      If ecx_cnt(1) >= 9 Or (k = -5 And ecx_cnt(1) = ecx_cnt(3)) Then ' Az dosud bylo mozno pouzitelne numeric
+    ' Depending on k and a lot of other things, increase ebcnt
+    If (k < 0) Then ' Treat mult-byte case or exit? (bude byte nebo konec)
+      If ecx_cnt(1) >= 9 Or (k = -5 And ecx_cnt(1) = ecx_cnt(3)) Then ' Until now it was possible numeric??? (Az dosud bylo mozno pouzitelne numeric)
         If (ecx_cnt(2) - ecx_cnt(1)) >= 8 Or (ecx_cnt(3) = ecx_cnt(2)) Then ' pred num je i pouzitelny alnum
           If (ecx_cnt(3) > ecx_cnt(2)) Then ' Jeste pred alnum bylo byte
             eb(ebcnt, 1) = 3         ' Typ byte
-            eb(ebcnt, 2) = ecx_pos(3) ' pozice
+            eb(ebcnt, 2) = ecx_pos(3) ' Position pozice
             eb(ebcnt, 3) = ecx_cnt(3) - ecx_cnt(2) ' delka
             ebcnt = ebcnt + 1
             ecx_poc(3) = ecx_poc(3) + 1
@@ -1555,7 +1569,7 @@ Function qr_gen(ptext As String, poptions As String) As String
           ecx_cnt(2) = 0
         ElseIf ecx_cnt(3) > ecx_cnt(1) Then ' byly bytes pred numeric
           eb(ebcnt, 1) = 3         ' Typ byte
-          eb(ebcnt, 2) = ecx_pos(3) ' pozice
+          eb(ebcnt, 2) = ecx_pos(3) ' Position pozice
           eb(ebcnt, 3) = ecx_cnt(3) - ecx_cnt(1) ' delka
           ebcnt = ebcnt + 1
           ecx_poc(3) = ecx_poc(3) + 1
@@ -1563,7 +1577,7 @@ Function qr_gen(ptext As String, poptions As String) As String
       ElseIf (ecx_cnt(2) >= 8) Or (k = -5 And ecx_cnt(2) = ecx_cnt(3)) Then ' Az dosud bylo mozno pouzitelne alnum
         If (ecx_cnt(3) > ecx_cnt(2)) Then ' Jeste pred alnum bylo byte
           eb(ebcnt, 1) = 3         ' Typ byte
-          eb(ebcnt, 2) = ecx_pos(3) ' pozice
+          eb(ebcnt, 2) = ecx_pos(3) ' Position pozice
           eb(ebcnt, 3) = ecx_cnt(3) - ecx_cnt(2) ' delka
           ebcnt = ebcnt + 1
           ecx_poc(3) = ecx_poc(3) + 1
@@ -1577,51 +1591,51 @@ Function qr_gen(ptext As String, poptions As String) As String
         ecx_cnt(2) = 0 ' vse zpracovano
       ElseIf (k = -5 And ecx_cnt(3) > 0) Then ' konec ale mam co ulozit
         eb(ebcnt, 1) = 3         ' Typ byte
-        eb(ebcnt, 2) = ecx_pos(3) ' pozice
+        eb(ebcnt, 2) = ecx_pos(3) ' Position pozice
         eb(ebcnt, 3) = ecx_cnt(3) ' delka
         ebcnt = ebcnt + 1
         ecx_poc(3) = ecx_poc(3) + 1
       End If
     End If
     If k = -5 Then Exit For
-    If (k >= 0) Then ' Muzeme alnum
-      If (k >= 10 And ecx_cnt(1) >= 12) Then ' Az dosud bylo mozno num
-        If (ecx_cnt(2) - ecx_cnt(1)) >= 8 Or (ecx_cnt(3) = ecx_cnt(2)) Then ' Je tam i alnum ktery stoji za to
-          If (ecx_cnt(3) > ecx_cnt(2)) Then ' Jeste pred alnum bylo byte
+    If (k >= 0) Then ' We can alphanumeric? (Muzeme alnum)
+      If (k >= 10 And ecx_cnt(1) >= 12) Then ' Until now it was perhaps numeric (Az dosud bylo mozno num)
+        If (ecx_cnt(2) - ecx_cnt(1)) >= 8 Or (ecx_cnt(3) = ecx_cnt(2)) Then ' There is also an alphanumeric which is worth it(Je tam i alnum ktery stoji za to)
+          If (ecx_cnt(3) > ecx_cnt(2)) Then ' Even before it was alnum byte (Jeste pred alnum bylo byte)
             eb(ebcnt, 1) = 3         ' Typ byte
-            eb(ebcnt, 2) = ecx_pos(3) ' pozice
-            eb(ebcnt, 3) = ecx_cnt(3) - ecx_cnt(2) ' delka
+            eb(ebcnt, 2) = ecx_pos(3) ' Position (pozice)
+            eb(ebcnt, 3) = ecx_cnt(3) - ecx_cnt(2) ' length (delka)
             ebcnt = ebcnt + 1
             ecx_poc(3) = ecx_poc(3) + 1
           End If
           eb(ebcnt, 1) = 2         ' Typ alnum
           eb(ebcnt, 2) = ecx_pos(2)
-          eb(ebcnt, 3) = ecx_cnt(2) - ecx_cnt(1) ' delka
+          eb(ebcnt, 3) = ecx_cnt(2) - ecx_cnt(1) ' length (delka)
           ebcnt = ebcnt + 1
           ecx_poc(2) = ecx_poc(2) + 1
-          ecx_cnt(2) = 0 ' vse zpracovano
-        ElseIf (ecx_cnt(3) > ecx_cnt(1)) Then ' Pred Num je byte
+          ecx_cnt(2) = 0 ' processed everything (vse zpracovano)
+        ElseIf (ecx_cnt(3) > ecx_cnt(1)) Then ' Previous Num is byte (Pred Num je byte)
           eb(ebcnt, 1) = 3         ' Typ byte
-          eb(ebcnt, 2) = ecx_pos(3) ' pozice
-          eb(ebcnt, 3) = ecx_cnt(3) - ecx_cnt(1) ' delka
+          eb(ebcnt, 2) = ecx_pos(3) ' Position (pozice)
+          eb(ebcnt, 3) = ecx_cnt(3) - ecx_cnt(1) ' length (delka)
           ebcnt = ebcnt + 1
           ecx_poc(3) = ecx_poc(3) + 1
         End If
         eb(ebcnt, 1) = 1         ' Typ numerix
         eb(ebcnt, 2) = ecx_pos(1)
-        eb(ebcnt, 3) = ecx_cnt(1) ' delka
+        eb(ebcnt, 3) = ecx_cnt(1) ' length (delka)
         ebcnt = ebcnt + 1
         ecx_poc(1) = ecx_poc(1) + 1
         ecx_cnt(1) = 0
         ecx_cnt(2) = 0
-        ecx_cnt(3) = 0 ' vse zpracovano
+        ecx_cnt(3) = 0 ' processed everything (vse zpracovano)
       End If
       If ecx_cnt(2) = 0 Then ecx_pos(2) = i
       ecx_cnt(2) = ecx_cnt(2) + 1
-    Else ' mozno alnum
+    Else ' possible alnum (mozno alnum)
       ecx_cnt(2) = 0
     End If
-    If k >= 0 And k < 10 Then ' muze byt numeric
+    If k >= 0 And k < 10 Then ' Can be numeric (muze byt numeric)
       If ecx_cnt(1) = 0 Then ecx_pos(1) = i
       ecx_cnt(1) = ecx_cnt(1) + 1
     Else
@@ -1630,22 +1644,72 @@ Function qr_gen(ptext As String, poptions As String) As String
     If ecx_cnt(3) = 0 Then ecx_pos(3) = i
     ecx_cnt(3) = ecx_cnt(3) + m
     utf8 = utf8 + m
-    If ebcnt >= 16 Then ' Uz by se mi tri dalsi bloky stejne nevesli
+    If ebcnt >= 16 Then ' We have already taken 3 other blocks of bits (Uz by se mi tri dalsi bloky stejne nevesli)
       ecx_cnt(1) = 0
       ecx_cnt(2) = 0
     End If
-'MsgBox "Znak:" & Mid(ptext,i,1) & "(" & k & ") ebn=" & ecx_pos(1) & "." & ecx_cnt(1) & " eba=" & ecx_pos(2) & "." & ecx_cnt(2) & " ebb=" & ecx_pos(3) & "." & ecx_cnt(3)
+    'Debug.Print "Character:'" & Mid(ptext, i, 1) & "'(" & k & _
+        ") ebn=" & ecx_pos(1) & "." & ecx_cnt(1) & _
+         " eba=" & ecx_pos(2) & "." & ecx_cnt(2) & _
+         " ebb=" & ecx_pos(3) & "." & ecx_cnt(3)
   Next
   ebcnt = ebcnt - 1
+  ' Check that eb() rows are non-overlapping
+  For j = 1 To ebcnt
+  
+     Debug.Print (j & ". (" & Mid("NAB", eb(j, 1), 1) & "): '" & Replace(Mid(ptext, eb(j, 2), eb(j, 3)), Chr(10), "\n") & "'")
+  Next j
+  i = 1
+  While i < (ebcnt - 1)
+    If eb(i, 2) + eb(i, 3) <> eb(i + 1, 2) Then
+        ' oops, this should not happen. First document it:
+        Debug.Print ("eb() rows " & i & " and " & i + 1 & " are overlapping:")
+        For j = 1 To ebcnt
+            If i = j Then
+                Debug.Print (eb(j, 1) & ": " & eb(j, 2) & " ... " & eb(j, 2) + eb(j, 3)) & " :-("
+            Else
+                Debug.Print (eb(j, 1) & ": " & eb(j, 2) & " ... " & eb(j, 2) + eb(j, 3))
+            End If
+        Next j
+        ' Now Lets see if we can fix it:
+        wasfixed = False
+        For k = i To 1 Step -1
+            If eb(k, 2) = eb(i + 1, 2) Then
+                ' okay, the row k to i seem to be contained in i+1 and following. Delete k to i ...
+                For j = k To ebcnt - (i - k + 1) ' ... by copying upwards all later rows...
+                    eb(j, 1) = eb(j + (i - k + 1), 1)
+                    eb(j, 2) = eb(j + (i - k + 1), 2)
+                    eb(j, 3) = eb(j + (i - k + 1), 3)
+                    eb(j, 4) = eb(j + (i - k + 1), 4)
+                Next j
+                ebcnt = ebcnt - (i - k + 1) ' and correcting the total rowcount
+                wasfixed = True
+                Debug.Print ("... this should be fixed now::")
+                For j = 1 To ebcnt
+                    Debug.Print (j & ". (" & eb(j, 1) & "): " & eb(j, 2) & " ... " & eb(j, 2) + eb(j, 3))
+                Next j
+                Exit For
+            End If
+        Next k
+        If Not (wasfixed) Then
+            MsgBox ("The input text analysis failed - entering debug mode...")
+            Debug.Assert False
+        End If
+    End If
+    i = i + 1
+  Wend
+  'Debug.Print ("ebcnt=" & ebcnt) ' ebcnt now has its final value
+  ' Calculate how many bits the message has in total?
   c = 0
   For i = 1 To ebcnt
     Select Case eb(i, 1)
-      Case 1: eb(i, 4) = Int(eb(i, 3) / 3) * 10 + (eb(i, 3) Mod 3) * 3 + Iif((eb(i, 3) Mod 3) > 0, 1, 0)
+      Case 1: eb(i, 4) = Int(eb(i, 3) / 3) * 10 + (eb(i, 3) Mod 3) * 3 + IIf((eb(i, 3) Mod 3) > 0, 1, 0)
       Case 2: eb(i, 4) = Int(eb(i, 3) / 2) * 11 + (eb(i, 3) Mod 2) * 6
       Case 3: eb(i, 4) = eb(i, 3) * 8
     End Select
     c = c + eb(i, 4)
   Next i
+  'Debug.Print ("c=" & c)
 '  UTF-8 is default not need ECI value - zxing cannot recognize
 '  Call qr_params(i * 8 + utf8,mode,qrp)
   Call qr_params(c, ecl, qrp, ecx_poc)
@@ -1654,11 +1718,13 @@ Function qr_gen(ptext As String, poptions As String) As String
     Exit Function
   End If
   siz = qrp(2)
+'Debug.Print "ver:" & qrp(1) & mode & " size " & siz & " ecc:" & qrp(3) & "x" & qrp(4) & " d:" & (qrp(5) - qrp(3) * qrp(4))
 'MsgBox "ver:" & qrp(1) & mode & " size " & siz & " ecc:" & qrp(3) & "x" & qrp(4) & " d:" & (qrp(5) - qrp(3) * qrp(4))
   ReDim encoded1(qrp(5) + 2)
+  ' Table 3 — Number of bits in character count indicator for QR Code 2005:
   ' mode indicator (1=num,2=AlNum,4=Byte,8=kanji,ECI=7)
-  '      mode: Byte Alhanum  Numeric  Kanji
-  ' ver 1..9 :  8      9       11       8
+  '      mode: Byte Alphanum  Numeric  Kanji
+  ' ver 1..9 :  8      9       10       8
   '   10..26 : 16     11       12      10
   '   27..40 : 16     13       14      12
 ' UTF-8 is default not need ECI value - zxing cannot recognize
@@ -1669,18 +1735,20 @@ Function qr_gen(ptext As String, poptions As String) As String
   encix1 = 0
   For i = 1 To ebcnt
     Select Case eb(i, 1)
-      Case 1: c = Iif(qrp(1) < 10, 10, Iif(qrp(1) < 27, 12, 14)): k = 2 ^ c + eb(i, 3)
-      Case 2: c = Iif(qrp(1) < 10, 9, Iif(qrp(1) < 27, 11, 13)): k = 2 * (2 ^ c) + eb(i, 3)
-      Case 3: c = Iif(qrp(1) < 10, 8, 16): k = 4 * (2 ^ c) + eb(i, 3)
+      Case 1: c = IIf(qrp(1) < 10, 10, IIf(qrp(1) < 27, 12, 14)): k = 2 ^ c + eb(i, 3) ' encoding mode "Numeric"
+      Case 2: c = IIf(qrp(1) < 10, 9, IIf(qrp(1) < 27, 11, 13)): k = 2 * (2 ^ c) + eb(i, 3) ' encoding mode "alphanum
+      Case 3: c = IIf(qrp(1) < 10, 8, 16): k = 4 * (2 ^ c) + eb(i, 3) ' encoding mode "Byte"
     End Select
     Call bb_putbits(encoded1, encix1, k, c + 4)
-    j = 0
-    m = eb(i, 2)
+    'Debug.Print "ver:" & qrp(1) & mode & " size " & siz & " ecc:" & qrp(3) & "x" & qrp(4) & " d:" & (qrp(5) - qrp(3) * qrp(4))
+    j = 0 ' count characters that have been output in THIS row eb(i,...)
+    m = eb(i, 2) 'Start (after) last character of input from previous row
     r = 0
     While j < eb(i, 3)
       k = AscL(Mid(ptext, m, 1))
       m = m + 1
       If eb(i, 1) = 1 Then
+        ' parse numeric input - output 3 decimal digits into 10 bit
         r = (r * 10) + ((k - &H30) Mod 10)
         If (j Mod 3) = 2 Then
           Call bb_putbits(encoded1, encix1, r, 10)
@@ -1688,6 +1756,7 @@ Function qr_gen(ptext As String, poptions As String) As String
         End If
         j = j + 1
       ElseIf eb(i, 1) = 2 Then
+        ' parse alphanumeric input - output 2 alphanumeric characters into 11 bit
         r = (r * 45) + ((InStr(qralnum, Chr(k)) - 1) Mod 45)
         If (j Mod 2) = 1 Then
           Call bb_putbits(encoded1, encix1, r, 11)
@@ -1695,6 +1764,7 @@ Function qr_gen(ptext As String, poptions As String) As String
         End If
         j = j + 1
       Else
+        ' Okay, byte mode: coding according to Chapter "6.4.2 Extended Channel Interpretation (ECI) mode" of ISOIEC 18004_2006Cor 1_2009.pdf
         If k > &H1FFFFF Then ' FFFF - 1FFFFFFF
           ch = &HF0 + Int(k / &H40000) Mod 8
           Call bb_putbits(encoded1, encix1, ch, 8)
@@ -1822,7 +1892,7 @@ Function qr_gen(ptext As String, poptions As String) As String
   Call qr_fill(qrarr, siz, encoded1, qrp(4), qrp(5) - qrp(3) * qrp(4), qrp(5))
   mask = 8 ' auto
   i = InStr(poptions, "mask=")
-  If i > 0 Then mask = val(Mid(poptions, i + 5, 1))
+  If i > 0 Then mask = Val(Mid(poptions, i + 5, 1))
   If mask < 0 Or mask > 7 Then
     j = -1
     For mask = 0 To 7
@@ -1916,7 +1986,7 @@ Sub bc_2D(ShIx As Integer, xAddr As String, xBC As String)
         xPosOld.y = xShape.Position.y
         xSizeOld.Width = xShape.Size.Width
         xSizeOld.Height = xShape.Size.Height
-        xPage.remove (xShape)
+        xPage.Remove (xShape)
       End If
     Next n
   End If
@@ -1944,10 +2014,10 @@ Sub bc_2D(ShIx As Integer, xAddr As String, xBC As String)
   If x = 0 Or y = 0 Then Exit Sub
   xGrp = xDoc.createInstance("com.sun.star.drawing.GroupShape")
   xGrp.Name = s
-  xPage.add (xGrp)
+  xPage.Add (xGrp)
   xShape = xDoc.createInstance("com.sun.star.drawing.RectangleShape")
   xShape.LineWidth = 0
-  xShape.LineStyle = com.sun.star.drawing.LineStyle.NONE
+  xShape.LineStyle = com.sun.star.Drawing.LineStyle.NONE
   xShape.FillStyle = xSolid
   xShape.FillColor = RGB(255, 255, 255)
   xPos.x = 0
@@ -1956,7 +2026,7 @@ Sub bc_2D(ShIx As Integer, xAddr As String, xBC As String)
   xSize.Width = x
   xSize.Height = y
   xShape.Size = xSize
-  xGrp.add (xShape)
+  xGrp.Add (xShape)
   x = 0
   y = 0
   a = 1
@@ -1999,14 +2069,14 @@ Sub bc_2D(ShIx As Integer, xAddr As String, xBC As String)
 crrect:
   xShape = xDoc.createInstance("com.sun.star.drawing.RectangleShape")
   xShape.LineWidth = 0
-  xShape.LineStyle = com.sun.star.drawing.LineStyle.NONE
+  xShape.LineStyle = com.sun.star.Drawing.LineStyle.NONE
   xShape.LineColor = RGB(255, 255, 255)
   xShape.FillStyle = xSolid
   xShape.FillColor = RGB(0, 0, 0)
   xShape.Position = xPos
   xShape.Size = xSize
   xShape.Name = xAddr & "#BR" & a
-  xGrp.add (xShape)
+  xGrp.Add (xShape)
   a = a + 1
   Return
 e2derr:
@@ -2052,7 +2122,7 @@ Sub bc_1D(ShIx As Integer, xAddr As String, xBC As String)
         xPosOld.y = xShape.Position.y
         xSizeOld.Width = xShape.Size.Width
         xSizeOld.Height = xShape.Size.Height
-        xPage.remove (xShape)
+        xPage.Remove (xShape)
       End If
     Next n%
   End If
@@ -2071,10 +2141,10 @@ Sub bc_1D(ShIx As Integer, xAddr As String, xBC As String)
   If x = 0 Then Exit Sub
   xGrp = xDoc.createInstance("com.sun.star.drawing.GroupShape")
   xGrp.Name = s
-  xPage.add (xGrp)
+  xPage.Add (xGrp)
   xShape = xDoc.createInstance("com.sun.star.drawing.RectangleShape")
   xShape.LineWidth = 0
-  xShape.LineStyle = com.sun.star.drawing.LineStyle.NONE
+  xShape.LineStyle = com.sun.star.Drawing.LineStyle.NONE
   xShape.FillStyle = xSolid
   xShape.FillColor = RGB(255, 255, 255)
   xPos.x = 0
@@ -2083,14 +2153,14 @@ Sub bc_1D(ShIx As Integer, xAddr As String, xBC As String)
   xSize.Width = x
   xSize.Height = m * 18
   xShape.Size = xSize
-  xGrp.add (xShape)
+  xGrp.Add (xShape)
   x = 0
   For n = 1 To Len(xBC)
     w = AscL(Mid(xBC, n, 1)) Mod 256
     If (w >= 48 And w <= 57) Then
       xShape = xDoc.createInstance("com.sun.star.drawing.RectangleShape")
       xShape.LineWidth = 0
-      xShape.LineStyle = com.sun.star.drawing.LineStyle.NONE
+      xShape.LineStyle = com.sun.star.Drawing.LineStyle.NONE
       If w >= 53 Then xSize.Height = m * 15 Else xSize.Height = m * 17
       w = (w - 48) Mod 5 + 1
       xShape.FillStyle = xSolid
@@ -2101,7 +2171,7 @@ Sub bc_1D(ShIx As Integer, xAddr As String, xBC As String)
       xShape.Position = xPos
       xShape.Size = xSize
       xShape.Name = xAddr & "#BR" & x
-      xGrp.add (xShape)
+      xGrp.Add (xShape)
     ElseIf (w >= 65 And w <= 69) Then
       w = w - 64
     Else
@@ -2352,3 +2422,203 @@ Sub bc_1Dms(xBC As String)
  End If
 End Sub
 
+
+Sub Test_RenderQRCode()
+    Call RenderQRCode(Application.ActiveSheet.Name, "A2", "Hello World", "mode=M", False)
+End Sub
+
+
+Public Sub RenderQRCode(workSheetName As String, cellLocation As String, textValue As String, Optional s_param As String, Optional addLabel As Boolean)
+   Dim s_encoded As String
+   Dim xSheet As Worksheet
+   Dim QRShapeName As String
+   Dim QRLabelName As String
+
+   If IsMissing(s_param) Then
+      s_param = "mode=Q"
+   End If
+   If IsMissing(addLabel) Then
+      addLabel = True
+   End If
+   
+   s_encoded = qr_gen(textValue, s_param)
+   Call DrawQRCode(s_encoded, workSheetName, cellLocation)
+
+   Set xSheet = Worksheets(workSheetName)
+   QRShapeName = "BC" & "$" & Left(cellLocation, 1) _
+       & "$" & Right(cellLocation, Len(cellLocation) - 1) & "#GR"
+
+   QRLabelName = QRShapeName & "_Label"
+
+   With xSheet.Shapes(QRShapeName)
+       .Width = 120
+       .Height = 120
+   End With
+
+   On Error Resume Next
+   If Not (xSheet.Shapes(QRLabelName) Is Nothing) Then
+       xSheet.Shapes(QRLabelName).Delete
+   End If
+
+   If addLabel Then
+       xSheet.Shapes.AddTextbox(msoTextOrientationHorizontal, _
+           xSheet.Shapes(QRShapeName).Left + 35, _
+           xSheet.Shapes(QRShapeName).Top, _
+           Len(textValue) * 6, 30) _
+           .Name = QRLabelName
+    
+       With xSheet.Shapes(QRLabelName)
+           .Line.Visible = msoFalse
+           .TextFrame2.TextRange.Font.Name = "Arial"
+           .TextFrame2.TextRange.Font.Size = 9
+           .TextFrame.Characters.Text = textValue
+           .TextFrame2.VerticalAnchor = msoAnchorMiddle
+       End With
+   End If
+End Sub
+
+Sub DrawQRCode(xBC As String, workSheetName As String, rangeName As String, Optional xNam As String)
+ Dim xShape As Shape, xBkgr As Shape
+ Dim xSheet As Worksheet
+ Dim xRange As Range, xCell As Range
+ Dim xAddr As String
+ Dim xPosOldX As Double, xPosOldY As Double
+ Dim xSizeOldW As Double, xSizeOldH As Double
+ Dim x, y, m, dm, a As Double
+ Dim b%, n%, w%, p$, s$, h%, g%
+
+Set xSheet = Worksheets(workSheetName)
+Set xRange = Worksheets(workSheetName).Range(rangeName)
+xAddr = xRange.Address
+xPosOldX = xRange.Left
+xPosOldY = xRange.Top
+
+ xSizeOldW = 0
+ xSizeOldH = 0
+ s = "BC" & xAddr & "#GR"
+ x = 0#
+ y = 0#
+ m = 2.5
+ dm = m * 2#
+ a = 0#
+ p = Trim(xBC)
+ b = Len(p)
+ For n = 1 To b
+   w = AscL(Mid(p, n, 1)) Mod 256
+   If (w >= 97 And w <= 112) Then
+     a = a + dm
+   ElseIf w = 10 Or n = b Then
+     If x < a Then x = a
+     y = y + dm
+     a = 0#
+   End If
+ Next n
+ If x <= 0# Then Exit Sub
+ On Error Resume Next
+ Set xShape = xSheet.Shapes(s)
+ On Error GoTo 0
+ If Not (xShape Is Nothing) Then
+   xPosOldX = xShape.Left
+   xPosOldY = xShape.Top
+   xSizeOldW = xShape.Width
+   xSizeOldH = xShape.Height
+   xShape.Delete
+ End If
+ On Error Resume Next
+ xSheet.Shapes("BC" & xAddr & "#BK").Delete
+ On Error GoTo 0
+ Set xBkgr = xSheet.Shapes.AddShape(msoShapeRectangle, 0, 0, x, y)
+ xBkgr.Line.Visible = msoFalse
+ xBkgr.Line.Weight = 0#
+ xBkgr.Line.ForeColor.RGB = RGB(255, 255, 255)
+ xBkgr.Fill.Solid
+ xBkgr.Fill.ForeColor.RGB = RGB(255, 255, 255)
+ xBkgr.Name = "BC" & xAddr & "#BK"
+ Set xShape = Nothing
+ x = 0#
+ y = 0#
+ g = 0
+ For n = 1 To b
+   w = AscL(Mid(p, n, 1)) Mod 256
+   If w = 10 Then
+     y = y + dm
+     x = 0#
+   ElseIf (w >= 97 And w <= 112) Then
+     w = w - 97
+     With xSheet.Shapes
+     Select Case w
+       Case 1: Set xShape = .AddShape(msoShapeRectangle, x, y, m, m): GoSub fmtxshape
+       Case 2: Set xShape = .AddShape(msoShapeRectangle, x + m, y, m, m): GoSub fmtxshape
+       Case 3: Set xShape = .AddShape(msoShapeRectangle, x, y, dm, m): GoSub fmtxshape
+       Case 4: Set xShape = .AddShape(msoShapeRectangle, x, y + m, m, m): GoSub fmtxshape
+       Case 5: Set xShape = .AddShape(msoShapeRectangle, x, y, m, dm): GoSub fmtxshape
+       Case 6: Set xShape = .AddShape(msoShapeRectangle, x + m, y, m, m): GoSub fmtxshape
+               Set xShape = .AddShape(msoShapeRectangle, x, y + m, m, m): GoSub fmtxshape
+       Case 7: Set xShape = .AddShape(msoShapeRectangle, x, y, dm, m): GoSub fmtxshape
+               Set xShape = .AddShape(msoShapeRectangle, x, y + m, m, m): GoSub fmtxshape
+       Case 8: Set xShape = .AddShape(msoShapeRectangle, x + m, y + m, m, m): GoSub fmtxshape
+       Case 9: Set xShape = .AddShape(msoShapeRectangle, x, y, m, m): GoSub fmtxshape
+               Set xShape = .AddShape(msoShapeRectangle, x + m, y + m, m, m): GoSub fmtxshape
+       Case 10: Set xShape = .AddShape(msoShapeRectangle, x + m, y, m, dm): GoSub fmtxshape
+       Case 11: Set xShape = .AddShape(msoShapeRectangle, x, y, dm, m): GoSub fmtxshape
+                Set xShape = .AddShape(msoShapeRectangle, x + m, y + m, m, m): GoSub fmtxshape
+       Case 12: Set xShape = .AddShape(msoShapeRectangle, x, y + m, dm, m): GoSub fmtxshape
+       Case 13: Set xShape = .AddShape(msoShapeRectangle, x, y, m, m): GoSub fmtxshape
+                Set xShape = .AddShape(msoShapeRectangle, x, y + m, dm, m): GoSub fmtxshape
+       Case 14: Set xShape = .AddShape(msoShapeRectangle, x + m, y, m, m): GoSub fmtxshape
+                Set xShape = .AddShape(msoShapeRectangle, x, y + m, dm, m): GoSub fmtxshape
+       Case 15: Set xShape = .AddShape(msoShapeRectangle, x, y, dm, dm): GoSub fmtxshape
+     End Select
+     End With
+     x = x + dm
+   End If
+ Next n
+ On Error Resume Next
+ Set xShape = xSheet.Shapes(s)
+ On Error GoTo 0
+ If Not (xShape Is Nothing) Then
+   xShape.Left = xPosOldX
+   xShape.Top = xPosOldY
+   If xSizeOldW > 0 Then
+     xShape.Width = xSizeOldW
+     xShape.Height = xSizeOldH
+   End If
+ Else
+   If Not (xBkgr Is Nothing) Then xBkgr.Delete
+ End If
+ Exit Sub
+fmtxshape:
+  xShape.Line.Visible = msoFalse
+  xShape.Line.Weight = 0#
+  xShape.Fill.Solid
+  xShape.Fill.ForeColor.RGB = RGB(0, 0, 0)
+  g = g + 1
+  xShape.Name = "BC" & xAddr & "#BR" & g
+  If g = 1 Then
+    xSheet.Shapes.Range(Array(xBkgr.Name, xShape.Name)).Group.Name = s
+  Else
+    xSheet.Shapes.Range(Array(s, xShape.Name)).Group.Name = s
+  End If
+  Return
+
+End Sub
+
+Sub Create_GIROCODE_QR()
+    Dim nl As String
+    Dim mytext As String
+    nl = vbNewLine
+    mytext = _
+        "BCD" & nl & _
+        "001" & nl & _
+        "1" & nl & _
+        "SCT" & nl & _
+        "(BIC)" & nl & _ 
+        "(Name of Recipient)" & nl & _ 
+        "(IBAN, e.g., DE12345678900000012345)" & nl & _ 
+        "EUR" & ThisWorkbook.ActiveSheet.Range("H22") & nl & _ 
+        "" & nl & _
+        "" & nl & _
+        "(reason for payment / Verwendungszweck)"
+    Debug.Print mytext
+    Call RenderQRCode(ThisWorkbook.ActiveSheet.Name, "J21", mytext, "mode=M", False)
+End Sub

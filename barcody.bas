@@ -1502,6 +1502,7 @@ Function qr_gen(ptext As String, poptions As String) As String
   Dim i&, j&, k&, m&
   Dim ch%, s%, siz%
   Dim x As Boolean
+  Dim wasfixed As Boolean
   Dim qrarr() As Byte ' final matrix
   Dim qrpos As Integer
   Dim qrp(15) As Integer     ' 1:version,2:size,3:ccs,4:ccb,5:totby,6-12:syncs(7),13-15:versinfo(3)
@@ -1669,15 +1670,26 @@ Function qr_gen(ptext As String, poptions As String) As String
             End If
         Next j
         ' Now Lets see if we can fix it:
-        If eb(i, 2) = eb(i + 1, 2) Then
-            ' okay, the current row is probably a subrow of the next one. Delete current row...
-            For j = i To ebcnt - 1 ' ... by copying upwards all later rows...
-                For k = 1 To 4
-                    eb(j, k) = eb(j + 1, k)
-                Next k
-            Next j
-            ebcnt = ebcnt - 1 ' and correcting the total rowcount
-        Else
+        wasfixed = False
+        For k = i To 1 Step -1
+            If eb(k, 2) = eb(i + 1, 2) Then
+                ' okay, the row k to i seem to be contained in i+1 and following. Delete k to i ...
+                For j = k To ebcnt - (i - k + 1) ' ... by copying upwards all later rows...
+                    eb(j, 1) = eb(j + (i - k + 1), 1)
+                    eb(j, 2) = eb(j + (i - k + 1), 2)
+                    eb(j, 3) = eb(j + (i - k + 1), 3)
+                    eb(j, 4) = eb(j + (i - k + 1), 4)
+                Next j
+                ebcnt = ebcnt - (i - k + 1) ' and correcting the total rowcount
+                wasfixed = True
+                Debug.Print ("... this should be fixed now::")
+                For j = 1 To ebcnt
+                    Debug.Print (j & ". (" & eb(j, 1) & "): " & eb(j, 2) & " ... " & eb(j, 2) + eb(j, 3))
+                Next j
+                Exit For
+            End If
+        Next k
+        If Not (wasfixed) Then
             MsgBox ("The input text analysis failed - entering debug mode...")
             Debug.Assert False
         End If
